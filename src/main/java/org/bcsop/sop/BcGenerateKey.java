@@ -96,7 +96,7 @@ public class BcGenerateKey implements GenerateKey {
         PGPDigestCalculator sha1Calc = new JcaPGPDigestCalculatorProviderBuilder().build().get(HashAlgorithmTags.SHA1);
         PGPContentSignerBuilder signerBuilder = new JcaPGPContentSignerBuilder(PublicKeyAlgorithmTags.RSA_GENERAL, HashAlgorithmTags.SHA384);
         JcePBESecretKeyEncryptorBuilder encBuilder = new JcePBESecretKeyEncryptorBuilder(SymmetricKeyAlgorithmTags.AES_256);
-        PBESecretKeyEncryptor encryptor = password == null ? encBuilder.build(null) : encBuilder.build(password.toCharArray());
+        PBESecretKeyEncryptor encryptor = password == null ? null : encBuilder.build(password.toCharArray());
         PGPKeyPair keyPair = new JcaPGPKeyPair(PGPPublicKey.RSA_GENERAL, kp, new Date());
         PGPKeyRingGenerator ringGen;
         if (userIds.isEmpty()) {

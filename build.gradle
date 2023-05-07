@@ -1,5 +1,6 @@
 plugins {
-    id 'java'
+    id 'application'
+    id "com.github.johnrengelman.shadow" version "6.1.0"
 }
 
 group 'org.example'
@@ -14,10 +15,26 @@ dependencies {
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
 
     implementation "org.pgpainless:sop-java:6.1.0"
+    implementation "org.pgpainless:sop-java-picocli:6.1.0"
     implementation "org.bouncycastle:bcprov-jdk15to18:1.73"
     implementation "org.bouncycastle:bcpg-jdk15to18:1.73"
 }
 
 test {
     useJUnitPlatform()
+}
+
+mainClassName = 'org.bcsop.cli.CLI'
+
+application {
+    mainClass = mainClassName
+}
+
+run {
+    // https://stackoverflow.com/questions/59445306/pipe-into-gradle-run
+    standardInput = System.in
+    // https://discuss.gradle.org/t/how-can-i-provide-command-line-args-to-application-started-with-gradle-run/6474/5
+    if (project.hasProperty("appArgs")) {
+        args Eval.me(appArgs)
+    }
 }

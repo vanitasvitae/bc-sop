@@ -12,6 +12,7 @@ import sop.Ready;
 import sop.exception.SOPGPException;
 import sop.operation.ExtractCert;
 
+import javax.swing.plaf.basic.BasicCheckBoxUI;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -32,7 +33,9 @@ public class BcExtractCert implements ExtractCert {
     @Override
     public Ready key(InputStream keyInputStream) throws IOException, SOPGPException.BadData {
         try {
-            PGPSecretKeyRing secretKeys = new PGPSecretKeyRing(keyInputStream, new JcaKeyFingerprintCalculator());
+            PGPSecretKeyRing secretKeys = new PGPSecretKeyRing(
+                    PGPUtil.getDecoderStream(keyInputStream),
+                    new JcaKeyFingerprintCalculator());
             Iterator< PGPPublicKey> it = secretKeys.getPublicKeys();
             List<PGPPublicKey> list = new ArrayList<>();
             while (it.hasNext()) {

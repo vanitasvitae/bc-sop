@@ -33,37 +33,37 @@ public class BcSOP implements SOP {
 
     @Override
     public DetachedSign detachedSign() {
-        return null;
+        return new BcDetachedSign();
     }
 
     @Override
     public InlineSign inlineSign() {
-        return null;
+        return new BcInlineSign();
     }
 
     @Override
     public DetachedVerify detachedVerify() {
-        return null;
+        return new BcDetachedVerify();
     }
 
     @Override
     public InlineVerify inlineVerify() {
-        return null;
+        return new BcInlineVerify();
     }
 
     @Override
     public InlineDetach inlineDetach() {
-        return null;
+        return new BcInlineDetach();
     }
 
     @Override
     public Encrypt encrypt() {
-        return null;
+        return new BcEncrypt();
     }
 
     @Override
     public Decrypt decrypt() {
-        return null;
+        return new BcDecrypt();
     }
 
     @Override

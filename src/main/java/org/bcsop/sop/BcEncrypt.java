@@ -1,23 +1,27 @@
 package org.bcsop.sop;
 
 import org.bouncycastle.bcpg.ArmoredOutputStream;
-import org.bouncycastle.bcpg.LiteralDataPacket;
+import org.bouncycastle.bcpg.HashAlgorithmTags;
 import org.bouncycastle.bcpg.SymmetricKeyAlgorithmTags;
 import org.bouncycastle.openpgp.PGPEncryptedDataGenerator;
 import org.bouncycastle.openpgp.PGPException;
 import org.bouncycastle.openpgp.PGPLiteralData;
 import org.bouncycastle.openpgp.PGPLiteralDataGenerator;
+import org.bouncycastle.openpgp.PGPOnePassSignature;
+import org.bouncycastle.openpgp.PGPPrivateKey;
 import org.bouncycastle.openpgp.PGPPublicKey;
 import org.bouncycastle.openpgp.PGPPublicKeyRing;
+import org.bouncycastle.openpgp.PGPSecretKey;
 import org.bouncycastle.openpgp.PGPSecretKeyRing;
+import org.bouncycastle.openpgp.PGPSignature;
 import org.bouncycastle.openpgp.PGPSignatureGenerator;
-import org.bouncycastle.openpgp.operator.PGPDataEncryptorBuilder;
+import org.bouncycastle.openpgp.PGPUtil;
+import org.bouncycastle.openpgp.operator.PGPContentSignerBuilder;
 import org.bouncycastle.openpgp.operator.bc.BcPGPDataEncryptorBuilder;
 import org.bouncycastle.openpgp.operator.jcajce.JcaKeyFingerprintCalculator;
 import org.bouncycastle.openpgp.operator.jcajce.JcaPGPContentSignerBuilder;
 import org.bouncycastle.openpgp.operator.jcajce.JcePBEKeyEncryptionMethodGenerator;
 import org.bouncycastle.openpgp.operator.jcajce.JcePublicKeyKeyEncryptionMethodGenerator;
-import org.bouncycastle.util.io.Streams;
 import sop.Ready;
 import sop.enums.EncryptAs;
 import sop.exception.SOPGPException;
@@ -26,7 +30,9 @@ import sop.operation.Encrypt;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 public class BcEncrypt implements Encrypt {
 
@@ -35,7 +41,9 @@ public class BcEncrypt implements Encrypt {
 
     PGPEncryptedDataGenerator encDataGen;
     PGPLiteralDataGenerator litDataGen;
-    PGPSignatureGenerator sigGen = null;
+
+    private final List<PGPSecretKeyRing> signingKeys = new ArrayList<>();
+    private final List<byte[]> keyPasswords = new ArrayList<>();
 
     public BcEncrypt() {
         encDataGen = new PGPEncryptedDataGenerator(
@@ -58,13 +66,22 @@ public class BcEncrypt implements Encrypt {
     @Override
     public Encrypt signWith(InputStream key)
             throws SOPGPException.KeyCannotSign, SOPGPException.UnsupportedAsymmetricAlgo, SOPGPException.BadData, IOException {
+        try {
+            PGPSecretKeyRing secretKeys = new PGPSecretKeyRing(
+                    PGPUtil.getDecoderStream(key),
+                    new JcaKeyFingerprintCalculator());
+            signingKeys.add(secretKeys);
+        } catch (PGPException e) {
+            throw new RuntimeException(e);
+        }
         return this;
     }
 
     @Override
     public Encrypt withKeyPassword(byte[] password)
             throws SOPGPException.PasswordNotHumanReadable, SOPGPException.UnsupportedOption {
-        return null;
+        this.keyPasswords.add(password);
+        return this;
     }
 
     @Override
@@ -77,7 +94,9 @@ public class BcEncrypt implements Encrypt {
     @Override
     public Encrypt withCert(InputStream cert)
             throws SOPGPException.CertCannotEncrypt, SOPGPException.UnsupportedAsymmetricAlgo, SOPGPException.BadData, IOException {
-        PGPPublicKeyRing publicKeys = new PGPPublicKeyRing(cert, new JcaKeyFingerprintCalculator());
+        PGPPublicKeyRing publicKeys = new PGPPublicKeyRing(
+                PGPUtil.getDecoderStream(cert),
+                new JcaKeyFingerprintCalculator());
         for (PGPPublicKey key : publicKeys) {
             if (key.isEncryptionKey()) {
                 encDataGen.addMethod(new JcePublicKeyKeyEncryptionMethodGenerator(key));
@@ -98,16 +117,54 @@ public class BcEncrypt implements Encrypt {
             @Override
             public void writeTo(OutputStream outputStream) throws IOException {
                 OutputStream out = armor ? new ArmoredOutputStream(outputStream) : outputStream;
+
+                List<PGPSignatureGenerator> sigGens = new ArrayList<>();
+                for (PGPSecretKeyRing signingKey : signingKeys) {
+                    for (PGPSecretKey key : signingKey) {
+                        try {
+                            if (key.isSigningKey()) {
+                                PGPPrivateKey privateKey = BcUtil.unlock(key, keyPasswords);
+                                PGPContentSignerBuilder sigBuilder = new JcaPGPContentSignerBuilder(
+                                        key.getPublicKey().getAlgorithm(),
+                                        HashAlgorithmTags.SHA384);
+                                PGPSignatureGenerator sigGen = new PGPSignatureGenerator(sigBuilder);
+                                sigGen.init(
+                                        as == EncryptAs.Binary ? PGPSignature.BINARY_DOCUMENT : PGPSignature.CANONICAL_TEXT_DOCUMENT,
+                                        privateKey);
+                                sigGens.add(sigGen);
+                            }
+                        } catch (PGPException e) {
+                            throw new SOPGPException.BadData("Cannot unlock secret key.", e);
+                        }
+                    }
+                }
+
                 try {
                     OutputStream encOut = encDataGen.open(out, new byte[2 << 8]);
+                    for (PGPSignatureGenerator sigGen : sigGens) {
+                        PGPOnePassSignature ops = sigGen.generateOnePassVersion(false);
+                        ops.encode(encOut);
+                    }
                     OutputStream litOut = litDataGen.open(
                             encOut,
                             as == EncryptAs.Binary ? PGPLiteralData.BINARY : PGPLiteralData.TEXT,
                             "",
                             new Date()
                             , new byte[2 << 8]);
-                    Streams.pipeAll(plaintext, litOut);
+
+                    int ch;
+                    while ((ch = plaintext.read()) >= 0) {
+                        for (PGPSignatureGenerator sigGen : sigGens) {
+                            sigGen.update((byte) ch);
+                        }
+                        litOut.write((byte) ch);
+                    }
                     litOut.close();
+
+                    for (int i = sigGens.size() - 1; i >= 0; i--) {
+                        sigGens.get(i).generate().encode(encOut);
+                    }
+
                     encOut.close();
                     out.close();
                 } catch (PGPException e) {
@@ -116,4 +173,6 @@ public class BcEncrypt implements Encrypt {
             }
         };
     }
+
+
 }
