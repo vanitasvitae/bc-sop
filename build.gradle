@@ -1,0 +1,23 @@
+plugins {
+    id 'java'
+}
+
+group 'org.example'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
+
+    implementation "org.pgpainless:sop-java:6.1.0"
+    implementation "org.bouncycastle:bcprov-jdk15to18:1.73"
+    implementation "org.bouncycastle:bcpg-jdk15to18:1.73"
+}
+
+test {
+    useJUnitPlatform()
+}
