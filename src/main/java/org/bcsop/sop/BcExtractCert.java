@@ -35,7 +35,7 @@ public class BcExtractCert implements ExtractCert {
         try {
             PGPSecretKeyRing secretKeys = new PGPSecretKeyRing(
                     PGPUtil.getDecoderStream(keyInputStream),
-                    new JcaKeyFingerprintCalculator());
+                    new JcaKeyFingerprintCalculator().setProvider(BcSOP.PROVIDER));
             Iterator< PGPPublicKey> it = secretKeys.getPublicKeys();
             List<PGPPublicKey> list = new ArrayList<>();
             while (it.hasNext()) {

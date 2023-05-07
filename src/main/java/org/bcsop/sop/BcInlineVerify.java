@@ -80,7 +80,9 @@ public class BcInlineVerify implements InlineVerify {
                             }
 
                             try {
-                                ops.init(new JcaPGPContentVerifierBuilderProvider(), cert.getPublicKey(ops.getKeyID()));
+                                ops.init(
+                                        new JcaPGPContentVerifierBuilderProvider().setProvider(BcSOP.PROVIDER),
+                                        cert.getPublicKey(ops.getKeyID()));
                                 verifications.add(new SignatureVerification(ops, cert));
                             } catch (PGPException e) {
                                 continue;
@@ -148,7 +150,7 @@ public class BcInlineVerify implements InlineVerify {
     public InlineVerify cert(InputStream cert)
             throws SOPGPException.BadData, IOException {
         PGPPublicKeyRing publicKeys = new PGPPublicKeyRing(
-                PGPUtil.getDecoderStream(cert), new JcaKeyFingerprintCalculator());
+                PGPUtil.getDecoderStream(cert), new JcaKeyFingerprintCalculator().setProvider(BcSOP.PROVIDER));
         certs.add(publicKeys);
         return this;
     }

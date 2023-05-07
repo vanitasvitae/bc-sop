@@ -80,8 +80,6 @@ public class BcGenerateKey implements GenerateKey {
     }
 
     private PGPSecretKeyRing generateKey() throws PGPException {
-        Security.addProvider(new BouncyCastleProvider());
-
         KeyPairGenerator kpg;
         try {
             kpg = KeyPairGenerator.getInstance("RSA", "BC");
@@ -93,9 +91,14 @@ public class BcGenerateKey implements GenerateKey {
 
         KeyPair kp = kpg.generateKeyPair();
 
-        PGPDigestCalculator sha1Calc = new JcaPGPDigestCalculatorProviderBuilder().build().get(HashAlgorithmTags.SHA1);
-        PGPContentSignerBuilder signerBuilder = new JcaPGPContentSignerBuilder(PublicKeyAlgorithmTags.RSA_GENERAL, HashAlgorithmTags.SHA384);
-        JcePBESecretKeyEncryptorBuilder encBuilder = new JcePBESecretKeyEncryptorBuilder(SymmetricKeyAlgorithmTags.AES_256);
+        PGPDigestCalculator sha1Calc = new JcaPGPDigestCalculatorProviderBuilder()
+                .setProvider(BcSOP.PROVIDER)
+                .build().get(HashAlgorithmTags.SHA1);
+        PGPContentSignerBuilder signerBuilder = new JcaPGPContentSignerBuilder(
+                PublicKeyAlgorithmTags.RSA_GENERAL, HashAlgorithmTags.SHA384)
+                .setProvider(BcSOP.PROVIDER);
+        JcePBESecretKeyEncryptorBuilder encBuilder = new JcePBESecretKeyEncryptorBuilder(SymmetricKeyAlgorithmTags.AES_256)
+                .setProvider(BcSOP.PROVIDER);
         PBESecretKeyEncryptor encryptor = password == null ? null : encBuilder.build(password.toCharArray());
         PGPKeyPair keyPair = new JcaPGPKeyPair(PGPPublicKey.RSA_GENERAL, kp, new Date());
         PGPKeyRingGenerator ringGen;

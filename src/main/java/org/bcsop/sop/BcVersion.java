@@ -15,7 +15,7 @@ public class BcVersion implements Version {
 
     @Override
     public String getBackendVersion() {
-        return "Bouncycastle 1.73";
+        return "Vanilla Bouncy Castle 1.73";
     }
 
     @Override

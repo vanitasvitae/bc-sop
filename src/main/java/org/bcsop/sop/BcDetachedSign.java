@@ -46,7 +46,8 @@ public class BcDetachedSign implements DetachedSign {
                     try {
                         PGPPrivateKey privateKey = BcUtil.unlock(key, keyPasswords);
                         JcaPGPContentSignerBuilder sigBuilder = new JcaPGPContentSignerBuilder(
-                                key.getPublicKey().getAlgorithm(), HashAlgorithmTags.SHA384);
+                                key.getPublicKey().getAlgorithm(), HashAlgorithmTags.SHA384)
+                                .setProvider(BcSOP.PROVIDER);
                         PGPSignatureGenerator sigGen = new PGPSignatureGenerator(sigBuilder);
                         sigGen.init(
                                 as == SignAs.Binary ? PGPSignature.BINARY_DOCUMENT : PGPSignature.CANONICAL_TEXT_DOCUMENT,
@@ -97,7 +98,7 @@ public class BcDetachedSign implements DetachedSign {
         try {
             PGPSecretKeyRing secretKeys = new PGPSecretKeyRing(
                     PGPUtil.getDecoderStream(key),
-                    new JcaKeyFingerprintCalculator());
+                    new JcaKeyFingerprintCalculator().setProvider(BcSOP.PROVIDER));
             signingKeys.add(secretKeys);
         } catch (PGPException e) {
             throw new SOPGPException.BadData(e);

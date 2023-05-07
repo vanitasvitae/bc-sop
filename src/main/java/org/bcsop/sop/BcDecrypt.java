@@ -21,6 +21,7 @@ import org.bouncycastle.openpgp.PGPSignatureList;
 import org.bouncycastle.openpgp.PGPUtil;
 import org.bouncycastle.openpgp.jcajce.JcaPGPObjectFactory;
 import org.bouncycastle.openpgp.operator.PBEDataDecryptorFactory;
+import org.bouncycastle.openpgp.operator.PGPContentVerifierBuilderProvider;
 import org.bouncycastle.openpgp.operator.jcajce.JcaKeyFingerprintCalculator;
 import org.bouncycastle.openpgp.operator.jcajce.JcaPGPContentVerifierBuilderProvider;
 import org.bouncycastle.openpgp.operator.jcajce.JcePBEDataDecryptorFactoryBuilder;
@@ -71,7 +72,7 @@ public class BcDecrypt implements Decrypt {
             throws SOPGPException.BadData, SOPGPException.UnsupportedAsymmetricAlgo, IOException {
         PGPPublicKeyRing c = new PGPPublicKeyRing(
                 PGPUtil.getDecoderStream(cert),
-                new JcaKeyFingerprintCalculator());
+                new JcaKeyFingerprintCalculator().setProvider(BcSOP.PROVIDER));
         this.certs.add(c);
         return this;
     }
@@ -96,7 +97,7 @@ public class BcDecrypt implements Decrypt {
         try {
             PGPSecretKeyRing secretKeys = new PGPSecretKeyRing(
                     PGPUtil.getDecoderStream(key),
-                    new JcaKeyFingerprintCalculator());
+                    new JcaKeyFingerprintCalculator().setProvider(BcSOP.PROVIDER));
             keys.add(secretKeys);
         } catch (PGPException e) {
             throw new SOPGPException.BadData(e);
@@ -119,6 +120,15 @@ public class BcDecrypt implements Decrypt {
             public DecryptionResult writeTo(OutputStream outputStream) throws IOException, SOPGPException.NoSignature {
 
                 PGPPublicKeyRingCollection certificates = new PGPPublicKeyRingCollection(certs);
+                PGPContentVerifierBuilderProvider contentVerifierBuilderProvider =
+                        new JcaPGPContentVerifierBuilderProvider()
+                                .setProvider(BcSOP.PROVIDER);
+                JcePublicKeyDataDecryptorFactoryBuilder pkDecryptorFactoryBuilder = new JcePublicKeyDataDecryptorFactoryBuilder()
+                        .setProvider(BcSOP.PROVIDER);
+                JceSessionKeyDataDecryptorFactoryBuilder skDecryptorFactoryBuilder = new JceSessionKeyDataDecryptorFactoryBuilder()
+                        .setProvider(BcSOP.PROVIDER);
+                JcePBEDataDecryptorFactoryBuilder pbDecryptorFactoryBuilder = new JcePBEDataDecryptorFactoryBuilder()
+                        .setProvider(BcSOP.PROVIDER);
 
                 List<SignatureVerification> signatures = new ArrayList<>();
                 PGPSessionKey sessionKey = null;
@@ -137,7 +147,7 @@ public class BcDecrypt implements Decrypt {
                             }
 
                             try {
-                                ops.init(new JcaPGPContentVerifierBuilderProvider(), cert.getPublicKey(ops.getKeyID()));
+                                ops.init(contentVerifierBuilderProvider, cert.getPublicKey(ops.getKeyID()));
                                 signatures.add(new SignatureVerification(ops, cert));
                             } catch (PGPException e) {
                                 throw new RuntimeException(e);
@@ -219,11 +229,11 @@ public class BcDecrypt implements Decrypt {
                                         throw new SOPGPException.KeyIsProtected("Cannot unlock secret key", e);
                                     }
 
+
                                     try {
-                                        sessionKey = pkEncData.getSessionKey(new JcePublicKeyDataDecryptorFactoryBuilder().build(privateKey));
+                                        sessionKey = pkEncData.getSessionKey(pkDecryptorFactoryBuilder.build(privateKey));
                                         inputStream = encDataList.extractSessionKeyEncryptedData()
-                                                .getDataStream(new JceSessionKeyDataDecryptorFactoryBuilder()
-                                                        .build(sessionKey));
+                                                .getDataStream(skDecryptorFactoryBuilder.build(sessionKey));
                                         objectFactory = new JcaPGPObjectFactory(inputStream);
                                     } catch (PGPException e) {
                                         continue;
@@ -232,12 +242,11 @@ public class BcDecrypt implements Decrypt {
                             } else {
                                 PGPPBEEncryptedData pbEncData = (PGPPBEEncryptedData) encData;
                                 for (String password : passwords) {
-                                    PBEDataDecryptorFactory decryptorFactory = new JcePBEDataDecryptorFactoryBuilder().build(password.toCharArray());
+                                    PBEDataDecryptorFactory decryptorFactory = pbDecryptorFactoryBuilder.build(password.toCharArray());
                                     try {
                                         sessionKey = pbEncData.getSessionKey(decryptorFactory);
                                         inputStream = encDataList.extractSessionKeyEncryptedData()
-                                                .getDataStream(new JceSessionKeyDataDecryptorFactoryBuilder()
-                                                        .build(sessionKey));
+                                                .getDataStream(skDecryptorFactoryBuilder.build(sessionKey));
                                         objectFactory = new JcaPGPObjectFactory(inputStream);
                                         break;
                                     } catch (PGPException e) {

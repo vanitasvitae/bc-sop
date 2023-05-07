@@ -21,6 +21,7 @@ import org.bouncycastle.openpgp.operator.bc.BcPGPDataEncryptorBuilder;
 import org.bouncycastle.openpgp.operator.jcajce.JcaKeyFingerprintCalculator;
 import org.bouncycastle.openpgp.operator.jcajce.JcaPGPContentSignerBuilder;
 import org.bouncycastle.openpgp.operator.jcajce.JcePBEKeyEncryptionMethodGenerator;
+import org.bouncycastle.openpgp.operator.jcajce.JcePGPDataEncryptorBuilder;
 import org.bouncycastle.openpgp.operator.jcajce.JcePublicKeyKeyEncryptionMethodGenerator;
 import sop.Ready;
 import sop.enums.EncryptAs;
@@ -47,7 +48,8 @@ public class BcEncrypt implements Encrypt {
 
     public BcEncrypt() {
         encDataGen = new PGPEncryptedDataGenerator(
-                new BcPGPDataEncryptorBuilder(SymmetricKeyAlgorithmTags.AES_256));
+                new JcePGPDataEncryptorBuilder(SymmetricKeyAlgorithmTags.AES_256)
+                        .setProvider(BcSOP.PROVIDER));
         litDataGen = new PGPLiteralDataGenerator();
     }
 
@@ -69,7 +71,7 @@ public class BcEncrypt implements Encrypt {
         try {
             PGPSecretKeyRing secretKeys = new PGPSecretKeyRing(
                     PGPUtil.getDecoderStream(key),
-                    new JcaKeyFingerprintCalculator());
+                    new JcaKeyFingerprintCalculator().setProvider(BcSOP.PROVIDER));
             signingKeys.add(secretKeys);
         } catch (PGPException e) {
             throw new RuntimeException(e);
@@ -87,7 +89,8 @@ public class BcEncrypt implements Encrypt {
     @Override
     public Encrypt withPassword(String password)
             throws SOPGPException.PasswordNotHumanReadable, SOPGPException.UnsupportedOption {
-        encDataGen.addMethod(new JcePBEKeyEncryptionMethodGenerator(password.toCharArray()));
+        encDataGen.addMethod(new JcePBEKeyEncryptionMethodGenerator(password.toCharArray())
+                .setProvider(BcSOP.PROVIDER));
         return this;
     }
 
@@ -96,10 +99,11 @@ public class BcEncrypt implements Encrypt {
             throws SOPGPException.CertCannotEncrypt, SOPGPException.UnsupportedAsymmetricAlgo, SOPGPException.BadData, IOException {
         PGPPublicKeyRing publicKeys = new PGPPublicKeyRing(
                 PGPUtil.getDecoderStream(cert),
-                new JcaKeyFingerprintCalculator());
+                new JcaKeyFingerprintCalculator().setProvider(BcSOP.PROVIDER));
         for (PGPPublicKey key : publicKeys) {
             if (key.isEncryptionKey()) {
-                encDataGen.addMethod(new JcePublicKeyKeyEncryptionMethodGenerator(key));
+                encDataGen.addMethod(new JcePublicKeyKeyEncryptionMethodGenerator(key)
+                        .setProvider(BcSOP.PROVIDER));
             }
         }
         return this;
@@ -126,7 +130,7 @@ public class BcEncrypt implements Encrypt {
                                 PGPPrivateKey privateKey = BcUtil.unlock(key, keyPasswords);
                                 PGPContentSignerBuilder sigBuilder = new JcaPGPContentSignerBuilder(
                                         key.getPublicKey().getAlgorithm(),
-                                        HashAlgorithmTags.SHA384);
+                                        HashAlgorithmTags.SHA384).setProvider(BcSOP.PROVIDER);
                                 PGPSignatureGenerator sigGen = new PGPSignatureGenerator(sigBuilder);
                                 sigGen.init(
                                         as == EncryptAs.Binary ? PGPSignature.BINARY_DOCUMENT : PGPSignature.CANONICAL_TEXT_DOCUMENT,

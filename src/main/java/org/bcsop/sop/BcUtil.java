@@ -15,7 +15,7 @@ import java.util.List;
 public class BcUtil {
 
     public static PGPPrivateKey unlock(PGPSecretKey key, List<byte[]> passwords) throws PGPException {
-        JcePBESecretKeyDecryptorBuilder decryptorBuilder = new JcePBESecretKeyDecryptorBuilder().setProvider(new BouncyCastleProvider());
+        JcePBESecretKeyDecryptorBuilder decryptorBuilder = new JcePBESecretKeyDecryptorBuilder().setProvider(BcSOP.PROVIDER);
         PBESecretKeyDecryptor decryptor;
         if (key.getKeyEncryptionAlgorithm() == SymmetricKeyAlgorithmTags.NULL) {
             decryptor = decryptorBuilder.build(null);

@@ -1,5 +1,6 @@
 package org.bcsop.sop;
 
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import sop.SOP;
 import sop.operation.Armor;
 import sop.operation.Dearmor;
@@ -15,7 +16,16 @@ import sop.operation.InlineVerify;
 import sop.operation.ListProfiles;
 import sop.operation.Version;
 
+import java.security.Security;
+
 public class BcSOP implements SOP {
+
+    static final BouncyCastleProvider PROVIDER = new BouncyCastleProvider();
+
+    public BcSOP() {
+        Security.insertProviderAt(PROVIDER, 1);
+    }
+
     @Override
     public Version version() {
         return new BcVersion();

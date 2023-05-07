@@ -56,7 +56,8 @@ public class BcInlineSign implements InlineSign {
                         try {
                             PGPPrivateKey privateKey = BcUtil.unlock(key, keyPasswords);
                             PGPContentSignerBuilder sigBuilder = new JcaPGPContentSignerBuilder(
-                                    key.getPublicKey().getAlgorithm(), HashAlgorithmTags.SHA384);
+                                    key.getPublicKey().getAlgorithm(), HashAlgorithmTags.SHA384)
+                                    .setProvider(BcSOP.PROVIDER);
                             PGPSignatureGenerator sigGen = new PGPSignatureGenerator(sigBuilder);
                             sigGen.init(
                                     as == InlineSignAs.binary ? PGPSignature.BINARY_DOCUMENT : PGPSignature.CANONICAL_TEXT_DOCUMENT,
@@ -132,7 +133,7 @@ public class BcInlineSign implements InlineSign {
             throws SOPGPException.KeyCannotSign, SOPGPException.BadData, SOPGPException.UnsupportedAsymmetricAlgo, IOException {
         try {
             PGPSecretKeyRing secretKeys = new PGPSecretKeyRing(
-                    PGPUtil.getDecoderStream(key), new JcaKeyFingerprintCalculator());
+                    PGPUtil.getDecoderStream(key), new JcaKeyFingerprintCalculator().setProvider(BcSOP.PROVIDER));
             signingKeys.add(secretKeys);
         } catch (PGPException e) {
             throw new SOPGPException.BadData("Cannot read key", e);

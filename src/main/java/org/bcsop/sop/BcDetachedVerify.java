@@ -64,7 +64,9 @@ public class BcDetachedVerify implements DetachedVerify {
 
     @Override
     public DetachedVerify cert(InputStream cert) throws SOPGPException.BadData, IOException {
-        PGPPublicKeyRing publicKeys = new PGPPublicKeyRing(PGPUtil.getDecoderStream(cert), new JcaKeyFingerprintCalculator());
+        PGPPublicKeyRing publicKeys = new PGPPublicKeyRing(
+                PGPUtil.getDecoderStream(cert),
+                new JcaKeyFingerprintCalculator().setProvider(BcSOP.PROVIDER));
         certs.add(publicKeys);
         return this;
     }
@@ -89,7 +91,7 @@ public class BcDetachedVerify implements DetachedVerify {
 
             try {
                 signature.init(new JcaPGPContentVerifierBuilderProvider()
-                        .setProvider(new BouncyCastleProvider()),
+                        .setProvider(BcSOP.PROVIDER),
                         issuer.getPublicKey(signature.getKeyID()));
                 SignatureVerification verification = new SignatureVerification(signature, issuer);
                 verifications.add(verification);
