@@ -163,13 +163,16 @@ public class BcEncrypt implements Encrypt {
                         }
                         litOut.write((byte) ch);
                     }
+                    litOut.flush();
                     litOut.close();
 
                     for (int i = sigGens.size() - 1; i >= 0; i--) {
                         sigGens.get(i).generate().encode(encOut);
                     }
 
+                    encOut.flush();
                     encOut.close();
+                    out.flush();
                     out.close();
                 } catch (PGPException e) {
                     throw new RuntimeException(e);

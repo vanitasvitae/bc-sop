@@ -198,6 +198,7 @@ public class BcDecrypt implements Decrypt {
                                 ops.getOps().update((byte) ch);
                             }
                         }
+                        outputStream.flush();
                     }
 
                     if (next instanceof PGPCompressedData) {
@@ -265,6 +266,7 @@ public class BcDecrypt implements Decrypt {
                             Hex.toHexString(validSig.getCert().getPublicKey(validSig.getSignature().getKeyID()).getFingerprint()),
                             Hex.toHexString(validSig.getCert().getPublicKey().getFingerprint())));
                 }
+                outputStream.close();
                 return new DecryptionResult(new SessionKey((byte) sessionKey.getAlgorithm(), sessionKey.getKey()), verifications);
             }
         };

@@ -15,12 +15,12 @@ public class BcVersion implements Version {
 
     @Override
     public String getBackendVersion() {
-        return "Vanilla Bouncy Castle 1.73";
+        return "Naiive Bouncy Castle 1.73";
     }
 
     @Override
     public String getExtendedVersion() {
-        return "A SOP implementation using naive Bouncycastle.";
+        return "A naiive SOP implementation using Bouncy Castle.";
     }
 
     @Override
